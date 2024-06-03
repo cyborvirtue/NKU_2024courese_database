@@ -1,0 +1,47 @@
+DELIMITER //
+
+CREATE PROCEDURE update_staff(
+    IN p_sid INT,
+    IN p_sname VARCHAR(50),
+    IN p_stime DATE,
+    IN p_susername VARCHAR(50),
+    IN p_spassword VARCHAR(50),
+    IN p_srole VARCHAR(20),
+    IN p_sphone VARCHAR(20)
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
+    START TRANSACTION;
+
+    -- 禁用外键约束
+    SET FOREIGN_KEY_CHECKS = 0;
+
+    -- 更新其他表中的外键
+    UPDATE checkin_client SET check_in_sid = p_sid WHERE check_in_sid = (SELECT sid FROM staff WHERE sid = p_sid);
+    UPDATE checkin_team SET check_in_sid = p_sid WHERE check_in_sid = (SELECT sid FROM staff WHERE sid = p_sid);
+    UPDATE client SET register_sid = p_sid WHERE register_sid = (SELECT sid FROM staff WHERE sid = p_sid);
+    UPDATE hotelorder SET register_sid = p_sid WHERE register_sid = (SELECT sid FROM staff WHERE sid = p_sid);
+    UPDATE team SET check_in_sid = p_sid WHERE check_in_sid = (SELECT sid FROM staff WHERE sid = p_sid);
+
+    -- 更新 staff 表中的信息，但不包括性别和身份证号
+    UPDATE staff
+    SET sname = p_sname,
+        stime = p_stime,
+        susername = p_susername,
+        spassword = p_spassword,
+        srole = p_srole,
+        sphone = p_sphone
+    WHERE sid = p_sid;
+
+    -- 启用外键约束
+    SET FOREIGN_KEY_CHECKS = 1;
+
+    COMMIT;
+END //
+
+DELIMITER ;
